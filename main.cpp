@@ -8,7 +8,7 @@
 
 using namespace std;
 
-//Параметр lpSecurityAttributes для разрешения доступа всем процессам
+//РџР°СЂР°РјРµС‚СЂ lpSecurityAttributes РґР»СЏ СЂР°Р·СЂРµС€РµРЅРёСЏ РґРѕСЃС‚СѓРїР° РІСЃРµРј РїСЂРѕС†РµСЃСЃР°Рј
 
 static PSECURITY_DESCRIPTOR create_security_descriptor()
 {
@@ -27,52 +27,45 @@ static SECURITY_ATTRIBUTES create_security_attributes()
     return attributes;
 }
 
-// 1.Запрос имени почтового ящика
+// 1.Р—Р°РїСЂРѕСЃ РёРјРµРЅРё РїРѕС‡С‚РѕРІРѕРіРѕ СЏС‰РёРєР°
 
 BOOL WINAPI MakeSlot(LPCTSTR lpName, HANDLE& hslot, bool& process)
 {
     auto Attributes = create_security_attributes();
-    hslot = CreateMailslot(lpName,NULL,MAILSLOT_WAIT_FOREVER,&Attributes);
-
+    hslot = CreateMailslot(
+                           lpName,//РёРјСЏ РїРѕС‡С‚РѕРІРѕРіРѕ СЏС‰РёРєР°
+                           NULL, //РјР°РєСЃРёРјР°Р»СЊРЅС‹Р№ СЂР°Р·РјРµСЂ СЃРѕРѕР±С‰РµРЅРёР№ РЅРµ СѓСЃС‚Р°РЅРѕРІР»РµРЅ
+                           MAILSLOT_WAIT_FOREVER,//РїСЂРё РѕРїРµСЂР°С†РёСЏС… РЅРµС‚ С‚Р°Р№РјР°СѓС‚Р°
+                           &Attributes//Р°С‚СЂРёР±СѓС‚С‹ РґРѕСЃС‚СѓРїР° РІС‹Р·РІР°РЅРЅС‹Рµ СЂР°РЅРµРµ СЃ РїРѕРјРѕС‰СЊСЋ С„СѓРЅРєС†РёРё create_security_attributes()
+                           );
     if (hslot == INVALID_HANDLE_VALUE)
     {
         DWORD error = GetLastError();
-
-        if (error == ERROR_INVALID_NAME||error == ERROR_ALREADY_EXISTS)
-        {
-            process = FALSE;
-            hslot = CreateFile(lpName,GENERIC_WRITE,FILE_SHARE_READ,(LPSECURITY_ATTRIBUTES)NULL,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,(HANDLE)NULL);
-
-            if (hslot == INVALID_HANDLE_VALUE)
-            {
-                DWORD error = GetLastError();
-                printf("Ошибка при выполнении функции CreateFile().Код ошибки: %d\n", GetLastError());
+                printf("РћС€РёР±РєР° РїСЂРё СЃРѕР·РґР°РЅРёРё РїРѕС‡С‚РѕРІРѕРіРѕ СЏС‰РёРєР°.РљРѕРґ РѕС€РёР±РєРё: %d\n", GetLastError());
                 return FALSE;
-            }
-        }
-        else
-        {
-            printf("Ошибка при выполнении функции CreateFile().Код ошибки: %d\n", GetLastError());
-            return FALSE;
-        }
     }
-    else
-        process = TRUE;
+
+    process = TRUE;
     return TRUE;
 }
 
-// 2.1.Запрос на получение информации о почтовом ящике
+// 2.1.Р—Р°РїСЂРѕСЃ РЅР° РїРѕР»СѓС‡РµРЅРёРµ РёРЅС„РѕСЂРјР°С†РёРё Рѕ РїРѕС‡С‚РѕРІРѕРј СЏС‰РёРєРµ
 
 BOOL GetInfo(HANDLE hSlot, DWORD* cbMessage, DWORD* cMessage)
 {
     DWORD cbMessageL, cMessageL;
-    BOOL info;
+    BOOL infoMail;
 
-    info = GetMailslotInfo(hSlot,(LPDWORD) NULL,&cbMessageL,&cMessageL,(LPDWORD) NULL);
+    infoMail = GetMailslotInfo(hSlot,//РґРµСЃРєСЂРёРїС‚РѕСЂ РїРѕС‡С‚РѕРІРѕРіРѕ СЏС‰РёРєР°
+                           (LPDWORD) NULL,//РЅРµС‚ РѕРіСЂР°РЅРёС‡РµРЅРёРµ РЅР° СЂР°Р·РјРµСЂ СЃРѕРѕР±С‰РµРЅРёСЏ
+                           &cbMessageL,//СЂР°Р·РјРµСЂ СЃР»РµРґСѓСЋС‰РµРіРѕ СЃРѕРѕР±С‰РµРЅРёСЏ
+                           &cMessageL,//РєРѕР»-РІРѕ СЃРѕРѕР±С‰РµРЅРёР№ РІ СЏС‰РёРєРµ
+                           (LPDWORD) NULL//Р±РµР· С‚Р°Р№РјР°СѓС‚Р° С‡С‚РµРЅРёСЏ
+                           );
 
-    if (info)
+    if (infoMail)
     {
-        printf("Найдено %i сообщений на почтовом ящике\n", cMessageL);
+        printf("РќР°Р№РґРµРЅРѕ %i СЃРѕРѕР±С‰РµРЅРёР№ РЅР° РїРѕС‡С‚РѕРІРѕРј СЏС‰РёРєРµ\n", cMessageL);
         if (cbMessage != NULL)
             *cbMessage = cbMessageL;
         if (cMessage != NULL)
@@ -81,69 +74,81 @@ BOOL GetInfo(HANDLE hSlot, DWORD* cbMessage, DWORD* cMessage)
     }
     else
     {
-        printf("Ошибка при выполнении функции GetMailslotInfo().Код ошибки: %d\n", GetLastError());
+        printf("РћС€РёР±РєР° РїСЂРё РІС‹РїРѕР»РЅРµРЅРёРё С„СѓРЅРєС†РёРё GetMailslotInfo().РљРѕРґ РѕС€РёР±РєРё: %d\n", GetLastError());
         return FALSE;
     }
 }
-// 2.2.Зпрос на помещение сообщения в почтовый ящик
-BOOL Write(HANDLE hFile, LPCTSTR lpszMessage)
+// 2.2.Р—РїСЂРѕСЃ РЅР° РїРѕРјРµС‰РµРЅРёРµ СЃРѕРѕР±С‰РµРЅРёСЏ РІ РїРѕС‡С‚РѕРІС‹Р№ СЏС‰РёРє
+BOOL WriteMessage(HANDLE hFile, LPCTSTR lpszMessage)
 {
     BOOL hwrite;
     DWORD cbWritten;
 
-    hwrite = WriteFile(hFile,lpszMessage,(lstrlen(lpszMessage) + 1) * sizeof(TCHAR),&cbWritten,(LPOVERLAPPED)NULL);
+    hwrite = WriteFile(hFile,//РґРµСЃРєСЂРёРїС‚РѕСЂ РїРѕС‡С‚РѕРІРѕРіРѕ СЏС‰РёРєР°
+                       lpszMessage,//СѓРєР°Р·Р°С‚Р°РµР»СЊ РЅР° Р±СѓС„РµСЂ, СЃРѕРґРµСЂР¶Р°С‰РёР№ СЃРѕРѕР±С‰РµРЅРёРµ
+                       (lstrlen(lpszMessage) + 1) * sizeof(TCHAR),//РєРѕР»-РІРѕ Р·Р°РїРёСЃС‹РІР°РµРјС‹С… Р±Р°Р№С‚РѕРІ
+                       &cbWritten,//РїРµСЂРµРјРµРЅРЅР°СЏ, РїРѕР»СѓС‡Р°СЋС‰Р°СЏ РєРѕР»-РІРѕ Р±Р°Р№С‚РѕРІ
+                       (LPOVERLAPPED)NULL//СѓРєР°Р·Р°С‚РµР»СЊ РЅРµ РЅСѓР¶РµРЅ РїРѕСЌС‚РјСѓ NULL
+                       );
 
-    if (hwrite!=0)
+    if (!hwrite)
     {
-        printf("Сообщение отправлено\n");
+        printf("РЎРѕРѕР±С‰РµРЅРёРµ РѕС‚РїСЂР°РІР»РµРЅРѕ\n");
         return TRUE;
     }
     else
     {
-        printf("Ошибка при выполнении функции WriteFile().Код ошибки: %d\n", GetLastError());
+        printf("РћС€РёР±РєР° Р·Р°РїРёСЃРё СЃРѕРѕР±С‰РµРЅРёСЏ.РљРѕРґ РѕС€РёР±РєРё: %d\n", GetLastError());
         return FALSE;
     }
     return TRUE;
 }
 
-//2.3.Запрос на получения сообщения из почтового ящика
 
-BOOL Read(HANDLE hFile)
+//2.3.Р—Р°РїСЂРѕСЃ РЅР° С‡С‚РµРЅРёСЏ СЃРѕРѕР±С‰РµРЅРёСЏ РёР· РїРѕС‡С‚РѕРІРѕРіРѕ СЏС‰РёРєР°
+
+BOOL ReadMessage(HANDLE hFile)
 {
     DWORD lpNextSize, lpMessageCount, lpNumberOfBytesRead;
-    BOOL infoR;
+    BOOL fresult;
 
     lpNextSize = lpMessageCount = lpNumberOfBytesRead = 0;
 
-    infoR = GetMailslotInfo(hFile,NULL,&lpNextSize,&lpMessageCount,NULL);
+    fresult = GetMailslotInfo(hFile,NULL,&lpNextSize,&lpMessageCount,NULL);
+
+    if (!fresult)
+    {
+        printf("РћС€РёР±РєР° РїСЂРё РїРѕР»СѓС‡РµРЅРёРё РёРЅС„РѕСЂРјР°С†РёРё Рѕ РїРѕС‡С‚РѕРІРѕРј СЏС‰РёРєРµ.РљРѕРґ РѕС€РёР±РєРё: %d\n", GetLastError());
+        return FALSE;
+    }
 
     if (lpNextSize == MAILSLOT_NO_MESSAGE)
     {
-        printf("Почтовый ящик пуст\n");
+        printf("РџРѕС‡С‚РѕРІС‹Р№ СЏС‰РёРє РїСѓСЃС‚\n");
         return TRUE;
     }
 
-    if (infoR==0)
-    {
-        printf("Ошибка при выполнении функции GetMailslotInfo.Код ошибки: %d\n", GetLastError());
-        return FALSE;
-    }
 
     string Message(lpNextSize,'\0');
     DWORD nNumberOfBytesToRead = sizeof(Message);
 
-    infoR = ReadFile(hFile,&Message[0], nNumberOfBytesToRead,&lpNumberOfBytesRead,NULL);
+    fresult = ReadFile(hFile,//РґРµСЃРєСЂРёРїС‚РѕСЂ РїРѕС‡С‚РѕРІРѕРіРѕ СЏС‰РёРєР°
+                     &Message[0],//Р±СѓС„РµСЂ СЃРѕРѕР±С‰РµРЅРёР№
+                      nNumberOfBytesToRead,//С‡РёСЃР»Рѕ Р±Р°Р№С‚РѕРІ РґР»СЏ С‡С‚РµРЅРёСЏ
+                      &lpNumberOfBytesRead,//С‡РёСЃР»Рѕ РїСЂРѕС‡РёС‚Р°РЅРЅС‹С… Р±Р°Р№С‚РѕРІ
+                      NULL//СѓРєР°Р·Р°С‚РµР»СЊ РЅРµ РЅСѓР¶РµРЅ РїРѕСЌС‚РјСѓ NULL
+                      );
 
-    if (infoR == 0)
+    if (fresult != 0)
     {
-        printf("Ошибка при попытке прочитать содержимое файла.Код ошибки: %d\n", GetLastError());
-        return FALSE;
-    }
-    cout << Message;
+        cout << Message;
     return TRUE;
+    }
+    printf("РћС€РёР±РєР° РїСЂРё РїРѕРїС‹С‚РєРµ РїСЂРѕС‡РёС‚Р°С‚СЊ СЃРѕРґРµСЂР¶РёРјРѕРµ С„Р°Р№Р»Р°.РљРѕРґ РѕС€РёР±РєРё: %d\n", GetLastError());
+        return FALSE;
 }
 
-// Главная программа и отключение от почтового ящика с помощью функции CloseHandle()
+// Р“Р»Р°РІРЅР°СЏ РїСЂРѕРіСЂР°РјРјР° Рё РѕС‚РєР»СЋС‡РµРЅРёРµ РѕС‚ РїРѕС‡С‚РѕРІРѕРіРѕ СЏС‰РёРєР° СЃ РїРѕРјРѕС‰СЊСЋ С„СѓРЅРєС†РёРё CloseHandle()
 
 int main()
 {
@@ -154,45 +159,49 @@ int main()
 
     setlocale(LC_ALL, "Russian");
 
-    cout << "Введите имя почтового ящика ";
+    cout << "Р’РІРµРґРёС‚Рµ РїРѕС‡С‚РѕРІС‹Р№ СЏС‰РёРє ";
     cin >> Name_mailslot;
 
     LPCTSTR SLOT_NAME = Name_mailslot.c_str();
 
     HANDLE hSlot;
+    int user;
     bool process;
 
-    bool result=MakeSlot(SLOT_NAME, hSlot, process);
-    if (result==FALSE)
+    bool fresult=MakeSlot(SLOT_NAME, hSlot, process);
+    if (!fresult)
         return 0;
 
-    printf("Процесс запущен");
-    printf((process) ? "Сервер\n" : "Клиент\n");
-    printf("Список команд:\n[check] - Получить информацию о количестве сообщений\n");
-    printf((process) ? "[read] - Чтение полученных сообщений\n" : "[write] - Отправка сообщений\n");
-    printf("[quit] - Завершение работы программы\n");
-
+    printf("РџСЂРѕС†РµСЃСЃ Р·Р°РїСѓС‰РµРЅ\n");
+    printf("Р’С‹Р±РµСЂРµС‚Рµ РїСЂРѕС†РµСЃСЃ:\n [1] - РЎРµСЂРІРµСЂ\n [2] - РљР»РёРµРЅС‚\n");
+    cin>>user;
+    if(user==1)
+        printf("РЎРµСЂРІРµСЂ\n РЎРїРёСЃРѕРє РєРѕРјР°РЅРґ:\n[1] - РџРѕР»СѓС‡РёС‚СЊ РёРЅС„РѕСЂРјР°С†РёСЋ Рѕ РєРѕР»РёС‡РµСЃС‚РІРµ СЃРѕРѕР±С‰РµРЅРёР№\n [2] - Р§С‚РµРЅРёРµ РїРѕР»СѓС‡РµРЅРЅС‹С… СЃРѕРѕР±С‰РµРЅРёР№\n [4] - Р—Р°РІРµСЂС€РµРЅРёРµ СЂР°Р±РѕС‚С‹ РїСЂРѕРіСЂР°РјРјС‹\n");
+    if(user==2)
+        printf("РљР»РёРµРЅС‚\n РЎРїРёСЃРѕРє РєРѕРјР°РЅРґ:\n[1] - РџРѕР»СѓС‡РёС‚СЊ РёРЅС„РѕСЂРјР°С†РёСЋ Рѕ РєРѕР»РёС‡РµСЃС‚РІРµ СЃРѕРѕР±С‰РµРЅРёР№\n [3] - РћС‚РїСЂР°РІРєР° СЃРѕРѕР±С‰РµРЅРёР№\n [4] - Р—Р°РІРµСЂС€РµРЅРёРµ СЂР°Р±РѕС‚С‹ РїСЂРѕРіСЂР°РјРјС‹\n");
+    if((user!=1)&&(user!=2))
+        printf("РљРѕРјР°РЅРґР° РІРІРµРґРµРЅР° РЅРµРєРѕСЂСЂРµРєС‚РЅРѕ.\n");
     string command;
     while (1)
     {
         cout << ">";
         cin >> command;
-        if (command == "check")
+        if (command == "1")
         {
             GetInfo(hSlot, cbMessage, cMessage);
         }
-        else if (command == "quit")
+        else if (command == "4")
         {
             CloseHandle(hSlot);
             return 0;
         }
-        else if ((command == "read") && (process))
+        else if ((command == "2") && (user==1))
         {
-            Read(hSlot);
+            ReadMessage(hSlot);
         }
-        else if ((command == "write") && (!process))
+        else if (command == "3")
         {
-            printf("Введите текст сообщения. Ввод продолжиться пока строка не пустая.\n");
+            printf("Р’РІРµРґРёС‚Рµ С‚РµРєСЃС‚ СЃРѕРѕР±С‰РµРЅРёСЏ. Р’РІРѕРґ РїСЂРѕРґРѕР»Р¶РёС‚СЊСЃСЏ РїРѕРєР° СЃС‚СЂРѕРєР° РЅРµ РїСѓСЃС‚Р°СЏ.\n");
 
             string message, str;
 
@@ -203,13 +212,11 @@ int main()
                 message += str + '\n';
             } while (!str.empty());
 
-            Write(hSlot, (LPCTSTR)message.c_str());
+            WriteMessage(hSlot, (LPCTSTR)message.c_str());
         }
-        else if ((command != "write") || (command != "check") || (command != "read") || (command == "quit"))
+        else if ((command != "1") || (command != "2") || (command != "3") || (command == "4"))
         {
-            printf("Команда введена некорректно.Введите одну из предложенных команд:\n[check]- информация о количестве сообщений\n");
-            printf((process) ? "[read]- чтение полученных сообщений\n" : "[write]- отправка сообщений\n");
-            printf("[quit]- завершение работы программы\n");
+            printf("РљРѕРјР°РЅРґР° РІРІРµРґРµРЅР° РЅРµРєРѕСЂСЂРµРєС‚РЅРѕ.\n");
         }
     }
     return 0;
